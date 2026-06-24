@@ -1,5 +1,10 @@
 # Logger
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/kishan-thanki/logger.svg)](https://pkg.go.dev/github.com/kishan-thanki/logger)
+[![Go CI](https://github.com/Kishan-Thanki/logger/actions/workflows/go.yml/badge.svg)](https://github.com/Kishan-Thanki/logger/actions/workflows/go.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kishan-thanki/logger)](https://goreportcard.com/report/github.com/kishan-thanki/logger)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 `logger` is a native, highly-optimized wrapper around Go's standard library `log/slog`. It provides advanced capabilities like zero-allocation PII Redaction, automatic Trace ID propagation, and HTTP Telemetry middleware without forcing developers to learn a proprietary logging API.
 
 By strictly utilizing `slog.JSONHandler`, the output is natively structured for seamless ingestion into any log aggregation platform or visualization tool.
