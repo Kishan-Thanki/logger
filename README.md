@@ -19,6 +19,8 @@ go get github.com/kishan-thanki/logger
 
 ## Quick Start
 
+*For a complete, runnable application demonstrating the logger, see the [Examples Directory](examples/README.md).*
+
 Initialize the handler and set it as your global Go logger:
 
 ```go
