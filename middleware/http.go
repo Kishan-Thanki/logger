@@ -1,9 +1,10 @@
 package middleware
 
 import (
-	"crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"time"
 
@@ -11,9 +12,10 @@ import (
 )
 
 func generateTraceID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	var b [16]byte
+	binary.LittleEndian.PutUint64(b[0:8], rand.Uint64())
+	binary.LittleEndian.PutUint64(b[8:16], rand.Uint64())
+	return hex.EncodeToString(b[:])
 }
 
 type responseWriter struct {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"testing"
 
@@ -61,5 +62,29 @@ func TestCoreHandler_TraceID(t *testing.T) {
 
 	if result["trace_id"] != "trace-xyz-123" {
 		t.Errorf("Expected trace_id to be 'trace-xyz-123', got %v", result["trace_id"])
+	}
+}
+
+func BenchmarkLogger_Info(b *testing.B) {
+	log := logger.New(logger.WithOutput(io.Discard))
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		log.Info("Benchmark message", slog.String("key", "value"))
+	}
+}
+
+func BenchmarkLogger_WithRedaction(b *testing.B) {
+	log := logger.New(
+		logger.WithOutput(io.Discard),
+		logger.WithRedaction("password", "secret"),
+	)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		log.Info("Benchmark message",
+			slog.String("username", "admin"),
+			slog.String("password", "supersecret"),
+		)
 	}
 }

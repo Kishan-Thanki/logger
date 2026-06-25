@@ -7,14 +7,11 @@ import (
 	"strings"
 )
 
-// coreHandler wraps a standard slog.Handler to provide automatic
-// context extraction (Trace IDs). PII redaction is handled via ReplaceAttr.
 type coreHandler struct {
 	slog.Handler
 	traceEnabled bool
 }
 
-// Handle intercepts the log record, injects context telemetry, and forwards it.
 func (h *coreHandler) Handle(ctx context.Context, r slog.Record) error {
 	if h.traceEnabled {
 		if traceID := ExtractTraceID(ctx); traceID != "" {
@@ -24,7 +21,6 @@ func (h *coreHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-// WithAttrs ensures the wrapper propagates properly when child loggers are created.
 func (h *coreHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &coreHandler{
 		Handler:      h.Handler.WithAttrs(attrs),
@@ -32,7 +28,6 @@ func (h *coreHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	}
 }
 
-// WithGroup ensures the wrapper propagates properly when groups are created.
 func (h *coreHandler) WithGroup(name string) slog.Handler {
 	return &coreHandler{
 		Handler:      h.Handler.WithGroup(name),
@@ -40,7 +35,6 @@ func (h *coreHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-// New creates a new highly-optimized slog.Logger configured for production usage.
 func New(opts ...Option) *slog.Logger {
 	cfg := &Config{
 		Level:      new(slog.LevelVar), // Defaults to INFO automatically
@@ -53,18 +47,16 @@ func New(opts ...Option) *slog.Logger {
 		opt(cfg)
 	}
 
-	redactMap := make(map[string]bool, len(cfg.RedactKeys))
-	for _, k := range cfg.RedactKeys {
-		redactMap[strings.ToLower(k)] = true
-	}
-
 	handlerOpts := &slog.HandlerOptions{
 		Level:     cfg.Level,
 		AddSource: cfg.Source,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			// Redact sensitive keys
-			if redactMap[strings.ToLower(a.Key)] {
-				a.Value = slog.StringValue("***REDACTED***")
+			for _, k := range cfg.RedactKeys {
+				if strings.EqualFold(a.Key, k) {
+					a.Value = slog.StringValue("***REDACTED***")
+					break
+				}
 			}
 			return a
 		},
