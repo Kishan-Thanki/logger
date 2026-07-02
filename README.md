@@ -1,19 +1,77 @@
-# Logger
+# Logger Middlewares
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/kishan-thanki/logger.svg)](https://pkg.go.dev/github.com/kishan-thanki/logger)
 [![Go CI](https://github.com/Kishan-Thanki/logger/actions/workflows/go.yml/badge.svg)](https://github.com/Kishan-Thanki/logger/actions/workflows/go.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-`logger` is a native, highly-optimized wrapper around Go's standard library `log/slog`. It provides advanced capabilities like zero-allocation PII Redaction, automatic Trace ID propagation, and HTTP Telemetry middleware without forcing developers to learn a proprietary logging API.
+A collection of composable, high-performance `slog.Handler` middlewares. This toolkit extends Go's standard `log/slog` library with zero-allocation PII redaction, Trace ID propagation, and HTTP telemetry without wrapping or replacing the core logger.
 
-By strictly utilizing `slog.JSONHandler`, the output is natively structured for seamless ingestion into any log aggregation platform or visualization tool.
+## Philosophy
 
-## Features
+You provide a standard `slog.JSONHandler` or `slog.TextHandler`, and you snap on the exact behaviors you need. No bloat, no lock-in. 
 
-- **Native `slog` Support**: Operates purely as a standard `slog.Handler`.
-- **PII Redaction**: Intercepts and masks sensitive keys (e.g. `password`, `credit_card`) with zero-allocation.
-- **Trace ID Context Propagation**: Automatically extracts and injects Trace IDs into deeply nested logs.
-- **HTTP Middleware**: Drop-in `net/http` telemetry middleware that logs request/response durations and status codes.
+## Packages
+
+### 1. Context Trace Middleware (`slogctx`)
+
+Propagates Trace IDs from `context.Context` to your log records automatically.
+
+```go
+import "github.com/kishan-thanki/logger/slogctx"
+
+baseHandler := slog.NewJSONHandler(os.Stdout, nil)
+ctxHandler := slogctx.NewHandler(baseHandler)
+
+slog.SetDefault(slog.New(ctxHandler))
+
+ctx := slogctx.InjectTraceID(context.Background(), "trace-123")
+slog.InfoContext(ctx, "Hello") // Output automatically includes {"trace_id": "trace-123"}
+```
+
+### 2. PII Redaction (`slogredact`)
+
+Scrub sensitive information from logs automatically before they hit the terminal.
+
+```go
+import "github.com/kishan-thanki/logger/slogredact"
+
+baseHandler := slog.NewJSONHandler(os.Stdout, nil)
+safeHandler := slogredact.NewHandler(baseHandler, "password", "token")
+```
+*(Note: A high-performance, zero-allocation `slogredact.ReplaceAttr` is also available for drop-in `HandlerOptions` use!)*
+
+### 3. HTTP Telemetry (`httptelemetry`)
+
+Drop-in `net/http` telemetry middleware that automatically measures latency, captures HTTP status codes, and securely generates and injects Trace IDs into the context.
+
+```go
+import "github.com/kishan-thanki/logger/httptelemetry"
+
+mux := http.NewServeMux()
+http.ListenAndServe(":8080", httptelemetry.Middleware(mux))
+```
+
+## The "Middleware Onion" (Quick Start)
+
+The true power of this package is unlocked by layering the handlers together like an onion. 
+
+```go
+// 1. Core Engine
+base := slog.NewJSONHandler(os.Stdout, nil)
+
+// 2. Security Layer (Redacts passwords)
+safe := slogredact.NewHandler(base, "password", "credit_card")
+
+// 3. Transport Layer (Injects trace_ids)
+ctxHandler := slogctx.NewHandler(safe)
+log := slog.New(ctxHandler)
+
+// 4. Web Layer (Generates trace_ids & captures HTTP telemetry)
+mux := http.NewServeMux()
+handler := httptelemetry.Middleware(mux)
+```
+
+See the [Examples Directory](examples/README.md) for a complete, runnable application demonstrating this full architecture in action!
 
 ## Installation
 
@@ -21,61 +79,6 @@ By strictly utilizing `slog.JSONHandler`, the output is natively structured for 
 go get github.com/kishan-thanki/logger
 ```
 
-## Quick Start
-
-_For a complete, runnable application demonstrating the logger, see the [Examples Directory](examples/README.md)._
-
-Initialize the handler and set it as your global Go logger:
-
-```go
-package main
-
-import (
-	"log/slog"
-	"net/http"
-
-	"github.com/kishan-thanki/logger"
-	"github.com/kishan-thanki/logger/middleware"
-)
-
-func main() {
-	// 1. Initialize the Logger Toolkit
-	handler := logger.New(
-		logger.WithLevel("INFO"),
-		logger.WithTraceID(true),
-		logger.WithRedaction("password", "token", "credit_card"),
-	)
-
-	// 2. Set it as the standard Go Logger
-	slog.SetDefault(handler)
-
-	// 3. (Optional) Wrap your HTTP Router with the Telemetry Middleware
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
-		// Log messages natively. "password" is automatically redacted!
-		slog.InfoContext(r.Context(), "Processing login request",
-			slog.String("username", "admin"),
-			slog.String("password", "super_secret"),
-		)
-	})
-
-	loggedMux := middleware.HTTP(mux)
-	http.ListenAndServe(":8080", loggedMux)
-}
-```
-
-## Advanced Usage
-
-### Context Injection (Trace IDs)
-
-When executing background jobs or deep database calls, you can inject a Trace ID into the context. Any `slog.InfoContext` call will automatically extract and attach it to the JSON output.
-
-```go
-ctx := logger.InjectTraceID(context.Background(), "trace-1234")
-slog.ErrorContext(ctx, "Database connection failed")
-// Output: {"level":"ERROR","msg":"Database connection failed","trace_id":"trace-1234"}
-```
-
 ## License
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
+Apache License 2.0. See the [LICENSE](LICENSE) file.

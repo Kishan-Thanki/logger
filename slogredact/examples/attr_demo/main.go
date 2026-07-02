@@ -18,8 +18,6 @@ var myhandler = slog.NewJSONHandler(os.Stdout, nil)
 var safeHandler = slogredact.NewHandler(myhandler, "password")
 var middlewareLog = slog.New(safeHandler)
 
-// =====================================
-
 type MiddlewareLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

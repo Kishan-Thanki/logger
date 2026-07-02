@@ -1,42 +1,58 @@
 package main
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
-	"github.com/kishan-thanki/logger"
-	"github.com/kishan-thanki/logger/middleware"
+	"github.com/kishan-thanki/logger/httptelemetry"
+	"github.com/kishan-thanki/logger/slogctx"
+	"github.com/kishan-thanki/logger/slogredact"
 )
 
-func main() {
-	// 1. Initialize the core slog Handler
-	handler := logger.New(
-		logger.WithLevel("INFO"),
-		logger.WithTraceID(true),
-		logger.WithRedaction("password", "token", "credit_card"),
+var base = slog.NewJSONHandler(os.Stdout, nil)
+var safeHandler = slogredact.NewHandler(base, "password", "token")
+var ctxHandler = slogctx.NewHandler(safeHandler)
+var log = slog.New(ctxHandler)
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.ErrorContext(r.Context(), "invalid login request", "error", err)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	log.InfoContext(r.Context(), "login attempt",
+		"email", req.Email,
+		"password", req.Password,
 	)
 
-	// 2. Set it as the Go global default logger
-	slog.SetDefault(handler)
-
-	// 3. Set up a simple HTTP handler
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
-		// Log the attempt (password will be automatically redacted if present)
-		slog.InfoContext(r.Context(), "Processing login request",
-			slog.String("username", "admin_user"),
-			slog.String("password", "super_secret_password"),
-		)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "success"}`))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"message": "Login successful",
+		"user": map[string]string{
+			"email": req.Email,
+		},
 	})
+}
 
-	// 4. Wrap the mux with our telemetry middleware
-	// This automatically injects Trace IDs into the context and logs all HTTP metrics!
-	loggedMux := middleware.HTTP(mux)
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /login", loginHandler)
 
-	slog.Info("Starting server", slog.Int("port", 8080))
-	if err := http.ListenAndServe(":8080", loggedMux); err != nil {
-		slog.Error("Server failed", slog.Any("error", err))
+	handler := httptelemetry.Middleware(mux)
+
+	log.Info("starting server", "addr", ":8080")
+	if err := http.ListenAndServe(":8080", handler); err != nil {
+		log.Error("server failed", "error", err)
 	}
 }
