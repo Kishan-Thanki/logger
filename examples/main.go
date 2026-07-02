@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/kishan-thanki/logger/httptelemetry"
-	"github.com/kishan-thanki/logger/slogctx"
-	"github.com/kishan-thanki/logger/slogredact"
+	"github.com/kishan-thanki/logger/v2/httptelemetry"
+	"github.com/kishan-thanki/logger/v2/slogctx"
+	"github.com/kishan-thanki/logger/v2/slogredact"
 )
 
 var base = slog.NewJSONHandler(os.Stdout, nil)

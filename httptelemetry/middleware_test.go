@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kishan-thanki/logger/httptelemetry"
-	"github.com/kishan-thanki/logger/slogctx"
+	"github.com/kishan-thanki/logger/v2/httptelemetry"
+	"github.com/kishan-thanki/logger/v2/slogctx"
 )
 
 func TestMiddleware(t *testing.T) {

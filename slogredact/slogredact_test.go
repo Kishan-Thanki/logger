@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/kishan-thanki/logger/slogredact"
+	"github.com/kishan-thanki/logger/v2/slogredact"
 )
 
 func TestHandler_Redact(t *testing.T) {

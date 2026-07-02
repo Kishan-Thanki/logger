@@ -17,7 +17,7 @@ You provide a standard `slog.JSONHandler` or `slog.TextHandler`, and you snap on
 Propagates Trace IDs from `context.Context` to your log records automatically.
 
 ```go
-import "github.com/kishan-thanki/logger/slogctx"
+import "github.com/kishan-thanki/logger/v2/slogctx"
 
 baseHandler := slog.NewJSONHandler(os.Stdout, nil)
 ctxHandler := slogctx.NewHandler(baseHandler)
@@ -33,7 +33,7 @@ slog.InfoContext(ctx, "Hello") // Output automatically includes {"trace_id": "tr
 Scrub sensitive information from logs automatically before they hit the terminal.
 
 ```go
-import "github.com/kishan-thanki/logger/slogredact"
+import "github.com/kishan-thanki/logger/v2/slogredact"
 
 baseHandler := slog.NewJSONHandler(os.Stdout, nil)
 safeHandler := slogredact.NewHandler(baseHandler, "password", "token")
@@ -45,7 +45,7 @@ safeHandler := slogredact.NewHandler(baseHandler, "password", "token")
 Drop-in `net/http` telemetry middleware that automatically measures latency, captures HTTP status codes, and securely generates and injects Trace IDs into the context.
 
 ```go
-import "github.com/kishan-thanki/logger/httptelemetry"
+import "github.com/kishan-thanki/logger/v2/httptelemetry"
 
 mux := http.NewServeMux()
 http.ListenAndServe(":8080", httptelemetry.Middleware(mux))

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/kishan-thanki/logger/slogctx"
+	"github.com/kishan-thanki/logger/v2/slogctx"
 )
 
 func TestHandler_InjectTraceID(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kishan-thanki/logger/slogctx"
+	"github.com/kishan-thanki/logger/v2/slogctx"
 )
 
 func generateTraceID() string {
